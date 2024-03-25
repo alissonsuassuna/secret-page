@@ -1,7 +1,8 @@
 import dotenv from 'dotenv'
 import express from 'express'
 import mongoose from 'mongoose'
-import encrypt from 'mongoose-encryption' 
+//import encrypt from 'mongoose-encryption' 
+import md5 from 'md5'
 
 dotenv.config()
 
@@ -18,7 +19,7 @@ const userSchema = new mongoose.Schema( {
     password: String
 })
 
-userSchema.plugin(encrypt, { secret: process.env.SECRET, encryptedFields: ['password']});
+// userSchema.plugin(encrypt, { secret: process.env.SECRET, encryptedFields: ['password']});
 
 const User = new mongoose.model('User', userSchema)
 
@@ -37,7 +38,7 @@ app.get('/register', (req, res) => {
 app.post('/register', (req, res) => {
     const newUser = new User({
         email: req.body.username,
-        password: req.body.password
+        password: md5(req.body.password)
     })
 
     newUser.save()
@@ -46,12 +47,12 @@ app.post('/register', (req, res) => {
 
 app.post('/login', async (req, res) => {
     const userName = req.body.username
-    const password = req.body.password
+    const password = md5(req.body.password)
 
     try {
 
         const resultUser = await User.findOne({email: userName}).exec()
-        if(resultUser) {
+        if(resultUser.password === password) {
             res.render('secrets')
         } else {
             res.send('<h2>Senha ou e-mail incorretos</h2>')
