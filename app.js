@@ -3,8 +3,11 @@ import express from 'express'
 import mongoose from 'mongoose'
 //import encrypt from 'mongoose-encryption' 
 import md5 from 'md5'
+import bcrypt from 'bcrypt'
 
 dotenv.config()
+
+const saltRounds = 10
 
 const app = express()
 
@@ -36,27 +39,36 @@ app.get('/register', (req, res) => {
 })
 
 app.post('/register', (req, res) => {
-    const newUser = new User({
-        email: req.body.username,
-        password: md5(req.body.password)
-    })
 
-    newUser.save()
-    res.render('secrets')
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+        // Store hash in your password DB.
+        const newUser = new User({
+            email: req.body.username,
+            password: hash
+        })
+    
+        newUser.save()
+        res.render('secrets')
+    });
+    
 })
 
 app.post('/login', async (req, res) => {
     const userName = req.body.username
-    const password = md5(req.body.password)
+    const password = req.body.password
 
     try {
 
         const resultUser = await User.findOne({email: userName}).exec()
-        if(resultUser.password === password) {
-            res.render('secrets')
-        } else {
-            res.send('<h2>Senha ou e-mail incorretos</h2>')
-        }
+
+        bcrypt.compare(password, resultUser.password, function(err, result) {
+            // result == true
+            if(result === true) {
+                res.render('secrets')
+            } else {
+                res.send('<h2>Senha ou e-mail incorretos</h2>')
+            }
+        });
     } catch (error) {
         console.log('Erro no sistema', error)
     }
